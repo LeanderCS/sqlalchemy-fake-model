@@ -1,0 +1,45 @@
+name: Run Tests on all environments
+
+on: [push]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-sqlalchemy-fake-model-env-${{ hashFiles('env_configs/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-sqlalchemy-fake-model-env-
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: image=moby/buildkit:latest
+
+      - name: Build sqlalchemy-fake-model-env image with cache
+        run: |
+          docker buildx build \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+            -t sqlalchemy-fake-model-env \
+            -f env_configs/Dockerfile \
+            . --load
+
+      - name: Run tests in Docker
+        run: |
+          set -x # Print commands and their arguments as they are executed.
+          set -e # Exit immediately if a command exits with a non-zero status.
+          set -u # Exit immediately if a variable is not defined.
+
+          docker run --rm sqlalchemy-fake-model-env tox

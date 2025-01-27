@@ -1,0 +1,7 @@
+django
+faker==2.0.0
+flask
+flask_sqlalchemy
+pytest
+sqlalchemy==1.3.0
+tornado

@@ -1,0 +1,53 @@
+name: Run Tests
+
+on: [ push ]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-sqlalchemy-fake-model-test-${{ hashFiles('Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-sqlalchemy-fake-model-test-
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: image=moby/buildkit:latest
+
+      - name: Build sqlalchemy-fake-model-test image with cache
+        run: |
+          docker buildx build \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+            -t sqlalchemy-fake-model-test . --load
+
+      - name: Run tests in Docker and upload coverage to Coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        run: |
+          set -x # Print commands and their arguments as they are executed.
+          set -e # Exit immediately if a command exits with a non-zero status.
+          set -u # Exit immediately if a variable is not defined.
+
+          docker run --rm -e COVERALLS_REPO_TOKEN=${{ secrets.COVERALLS_REPO_TOKEN }} sqlalchemy-fake-model-test sh -c "coverage run --source=sqlalchemy_fake_model -m pytest test/ && coveralls"
+
+      - name: Run code style checks
+        run: |
+          set -x # Print commands and their arguments as they are executed
+          set -e # Exit immediately if a command exits with a non-zero status
+          set -u # Exit immediately if a variable is not defined
+      
+          docker run sqlalchemy-fake-model-test flake8

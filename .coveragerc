@@ -1,0 +1,5 @@
+[run]
+source = sqlalchemy_fake_model
+
+[report]
+omit = __init__.py, setup.py, */test/*
