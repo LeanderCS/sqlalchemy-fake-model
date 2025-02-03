@@ -2,7 +2,7 @@ FROM python:3.6-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y gcc python3-dev
+RUN apt-get update && apt-get install -y gcc python3-dev git
 
 RUN pip install --upgrade pip
 
