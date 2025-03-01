@@ -7,6 +7,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Float,
+    ForeignKey,
     Integer,
     String,
     Text,
@@ -16,6 +17,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from sqlalchemy_fake_model import ModelFaker
+from sqlalchemy_fake_model.Error import InvalidAmountError
+from sqlalchemy_fake_model.Model import ModelFakerConfig
 
 """
 Test the ModelFaker class
@@ -45,7 +48,11 @@ class MyModel(Base):
     float_field = Column(Float((5, 2)), nullable=False)
     date_field = Column(Date, nullable=False)
     datetime_field = Column(DateTime, nullable=False)
-    json_list_field = Column(Text, nullable=False, doc='["string", "integer"]')
+    json_list_field = Column(
+        Text,
+        nullable=False,
+        doc='["string", "integer", "float", "date", "datetime"]',
+    )
     json_obj_field = Column(
         Text,
         nullable=False,
@@ -55,12 +62,12 @@ class MyModel(Base):
     )
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def engine():
     return create_engine("sqlite:///:memory:")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def session(engine):
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
@@ -90,8 +97,8 @@ def test_flask_integration() -> None:
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db = SQLAlchemy(app)
 
-    class MyModel2(db.Model):
-        __tablename__ = "mymodel2"
+    class MyFlaskModel(db.Model):
+        __tablename__ = "myflaskmodel"
         id = db.Column(db.Integer, primary_key=True)
         string_field = db.Column(db.String(80), nullable=False)
         short_string_field = db.Column(db.String(5), nullable=False)
@@ -99,7 +106,8 @@ def test_flask_integration() -> None:
         nullable_field = db.Column(db.String(80), nullable=True)
         boolean_field = db.Column(db.Boolean, nullable=False)
         default_field = db.Column(
-            db.String(80), nullable=False, default="test123")
+            db.String(80), nullable=False, default="test123"
+        )
         integer_field = db.Column(db.Integer, nullable=False)
         max_min_integer_field = db.Column(
             db.Integer, nullable=False, info={"min": 100, "max": 101}
@@ -119,9 +127,9 @@ def test_flask_integration() -> None:
 
     with app.app_context():
         db.create_all()
-        model_faker = ModelFaker(MyModel2)
+        model_faker = ModelFaker(MyFlaskModel)
         model_faker.create(amount=5)
-        fake_entries = db.session.query(MyModel2).all()
+        fake_entries = db.session.query(MyFlaskModel).all()
         assert len(fake_entries) == 5
 
 
@@ -131,7 +139,8 @@ def test_tornado_integration() -> None:
 
     app = Application()
     app.settings["db"] = sessionmaker(
-        bind=create_engine("sqlite:///:memory:"))()
+        bind=create_engine("sqlite:///:memory:")
+    )()
 
     Base.metadata.create_all(app.settings["db"].bind)
     model_faker = ModelFaker(MyModel, app.settings["db"])
@@ -178,33 +187,62 @@ def test_create_fake_data(fake_data, session) -> None:
     assert len(fake_entries) == 5
 
 
+def test_create_fake_data_invalid_amount(fake_data, session) -> None:
+    """
+    Test if the ModelFaker is able to create fake data and validate each field.
+    """
+    with pytest.raises(InvalidAmountError):
+        fake_data.create(amount="invalid")
+
+
 def test_nullable_field(fake_data, session) -> None:
     """
     Test if the nullable fields are handled correctly by ModelFaker.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
     assert entry.nullable_field is None
 
 
+def test_nullable_field_fill(fake_data, session) -> None:
+    """
+    Test if the nullable fields are handled correctly by ModelFaker.
+    """
+    ModelFaker(
+        MyModel, session, config=ModelFakerConfig(fill_nullable_fields=True)
+    ).create()
+
+    entry = session.query(MyModel).first()
+    assert entry.nullable_field is not None
+
+
 def test_default_value(fake_data, session) -> None:
     """
     Test if the default value is correctly set (for price).
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
     assert entry.default_field == "test123"
 
 
+def test_default_value_fill(fake_data, session) -> None:
+    """
+    Test if the default value is correctly set (for price).
+    """
+    ModelFaker(
+        MyModel, session, config=ModelFakerConfig(fill_default_fields=True)
+    ).create()
+
+    entry = session.query(MyModel).first()
+    assert entry.default_field != "test123"
+
+
 def test_string_field(fake_data, session) -> None:
     """
     Test if the string field is handled correctly.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
@@ -215,7 +253,6 @@ def test_integer_field(fake_data, session) -> None:
     """
     Test if the integer field is handled correctly.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
@@ -226,7 +263,6 @@ def test_max_min_integer_field(fake_data, session) -> None:
     """
     Test if the integer field is handled correctly.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
@@ -239,7 +275,6 @@ def test_float_field(fake_data, session) -> None:
     """
     Test if the integer field is handled correctly.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
@@ -260,7 +295,6 @@ def test_bool_field(fake_data, session) -> None:
     """
     Test if the bool field is handled correctly.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
@@ -271,7 +305,6 @@ def test_date_field(fake_data, session) -> None:
     """
     Test if the date field is handled correctly.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
@@ -282,7 +315,6 @@ def test_datetime_field(fake_data, session) -> None:
     """
     Test if the datetime field is handled correctly.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
@@ -293,7 +325,6 @@ def test_json_list_field(fake_data, session) -> None:
     """
     Test if the json field is handled correctly.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
@@ -303,7 +334,7 @@ def test_json_list_field(fake_data, session) -> None:
 
     json_data = eval(entry.json_list_field)
     assert isinstance(json_data, list)
-    assert len(json_data) == 2
+    assert len(json_data) == 5
 
     assert isinstance(json_data[0], str)
     assert isinstance(json_data[1], int)
@@ -313,7 +344,6 @@ def test_json_obj_field(fake_data, session) -> None:
     """
     Test if the json field is handled correctly.
     """
-
     fake_data.create()
 
     entry = session.query(MyModel).first()
@@ -326,3 +356,63 @@ def test_json_obj_field(fake_data, session) -> None:
     assert isinstance(json_data["location"], dict)
     assert isinstance(json_data["location"]["city"], str)
     assert isinstance(json_data["location"]["zip"], int)
+
+
+def test_foreign_key(fake_data, session) -> None:
+    """
+    Test if the foreign key field is handled correctly.
+    """
+
+    class MyModelForeignKey(Base):
+
+        __tablename__ = "mymodel_foreignkey"
+
+        id = Column(Integer, primary_key=True)
+        foreign_key = Column(Integer, ForeignKey("mymodel.id"), nullable=False)
+
+    Base.metadata.create_all(session.bind)
+
+    fake_foreign_entries = session.query(MyModel).all()
+    assert len(fake_foreign_entries) == 0
+
+    ModelFaker(MyModelForeignKey, session).create()
+
+    fake_entries = session.query(MyModelForeignKey).all()
+    assert len(fake_entries) == 1
+
+    fake_foreign_entries = session.query(MyModel).all()
+    assert len(fake_foreign_entries) == 1
+
+
+def test_foreign_key_not_id(fake_data, session) -> None:
+    """
+    Test if the foreign key field is handled correctly.
+    """
+
+    class MyModel2(Base):
+
+        __tablename__ = "mymodel2"
+
+        name = Column(String, primary_key=True)
+
+    class MyModel3(Base):
+
+        __tablename__ = "mymodel3"
+
+        id = Column(Integer, primary_key=True)
+        foreign_key = Column(
+            String, ForeignKey("mymodel2.name"), nullable=False
+        )
+
+    Base.metadata.create_all(session.bind)
+
+    fake_foreign_entries = session.query(MyModel2).all()
+    assert len(fake_foreign_entries) == 0
+
+    ModelFaker(MyModel3, session).create()
+
+    fake_entries = session.query(MyModel3).all()
+    assert len(fake_entries) == 1
+
+    fake_foreign_entries = session.query(MyModel2).all()
+    assert len(fake_foreign_entries) == 1

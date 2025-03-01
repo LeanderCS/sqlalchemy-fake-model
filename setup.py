@@ -2,11 +2,11 @@ from setuptools import find_packages, setup
 
 setup(
     name="sqlalchemy-fake-model",
-    version="0.0.0",
+    version="0.0.1",
     author="Leander Cain Slotosch",
     author_email="slotosch.leander@outlook.de",
     description="A library to generate complex fake database-entries "
-                "based on SQLAlchemy models",
+    "based on SQLAlchemy models",
     long_description=open("README.rst").read(),
     long_description_content_type="text/x-rst",
     url="https://github.com/LeanderCS/sqlalchemy-fake-model",
@@ -31,7 +31,7 @@ setup(
     ],
     python_requires=">=3.6",
     project_urls={
-        "Documentation": "https://leandercs.github.io/sqlalchemy-fake-model",
+        "Documentation": "https://github.com/LeanderCS/sqlalchemy-fake-model",
         "Source": "https://github.com/LeanderCS/sqlalchemy-fake-model",
     },
 )
