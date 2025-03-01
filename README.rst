@@ -32,12 +32,12 @@ This will help me to understand how many people are interested in this project.
     .. image:: https://img.shields.io/pypi/pyversions/sqlalchemy-fake-model?style=flat-square&label=PyPI
         :target: https://pypi.org/project/sqlalchemy-fake-model/
 
-.. :Downloads:
+:Downloads:
 
-..    .. image:: https://img.shields.io/pypi/dm/sqlalchemy-fake-model?style=flat-square&label=PyPI
-..        :target: https://pypi.org/project/sqlalchemy-fake-model/
-..    .. image:: https://static.pepy.tech/badge/sqlalchemy-fake-model
-..        :target: https://pypi.org/project/sqlalchemy-fake-model/
+    .. image:: https://static.pepy.tech/badge/sqlalchemy-fake-model/month
+        :target: https://pypi.org/project/sqlalchemy-fake-model/
+    .. image:: https://static.pepy.tech/badge/sqlalchemy-fake-model
+        :target: https://pypi.org/project/sqlalchemy-fake-model/
 
 Installation
 ============
@@ -213,11 +213,22 @@ Following example would result in a creation of an entry for the users table to 
 
 .. code-block:: python
 
-    user_id: Column[Integer] = db.Column(
-        db.Integer(),
-        db.ForeignKey("users.id"),
-        nullable=False
-    )
+    class User(Base):
+        __tablename__ = "users"
+
+        id: Column[Integer] = db.Column(
+            db.Integer,
+            primary_key=True
+        )
+
+    class Message(Base):
+        user_id: Column[Integer] = db.Column(
+            db.Integer,
+            db.ForeignKey("users.id"),
+            nullable=False
+        )
+
+It is also allowed to use different types as primary key.
 
 Define custom data format
 -------------------------
