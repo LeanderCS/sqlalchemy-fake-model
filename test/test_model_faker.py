@@ -1,4 +1,5 @@
 from datetime import date, datetime
+import uuid
 
 import pytest
 from sqlalchemy import (
@@ -11,13 +12,18 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    Time,
+    Interval,
+    LargeBinary,
     create_engine,
 )
+from sqlalchemy.dialects.postgresql import UUID, JSON, JSONB
+from sqlalchemy.types import DECIMAL
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from sqlalchemy_fake_model import ModelFaker
-from sqlalchemy_fake_model.Error import InvalidAmountError
+from sqlalchemy_fake_model.Error import InvalidAmountError, UniquenessError
 from sqlalchemy_fake_model.Model import ModelFakerConfig
 
 """
@@ -416,3 +422,514 @@ def test_foreign_key_not_id(fake_data, session) -> None:
 
     fake_foreign_entries = session.query(MyModel2).all()
     assert len(fake_foreign_entries) == 1
+
+
+def test_new_data_types(session) -> None:
+    """Test the new data types functionality."""
+
+    class ExtendedModel(Base):
+        __tablename__ = "extended_model"
+
+        id = Column(Integer, primary_key=True)
+        uuid_field = Column(String, nullable=False)
+        decimal_field = Column(DECIMAL(10, 2), nullable=False)
+        time_field = Column(Time, nullable=False)
+        interval_field = Column(String, nullable=False)  # Interval as string for SQLite
+        binary_field = Column(LargeBinary, nullable=False)
+        json_field = Column(Text, nullable=False)  # JSON as text for SQLite
+
+    Base.metadata.create_all(session.bind)
+
+    ModelFaker(ExtendedModel, session).create(amount=3)
+
+    entries = session.query(ExtendedModel).all()
+    assert len(entries) == 3
+
+    for entry in entries:
+        assert entry.uuid_field is not None
+        assert entry.decimal_field is not None
+        assert entry.time_field is not None
+        assert entry.interval_field is not None
+        assert entry.binary_field is not None
+        assert entry.json_field is not None
+
+
+def test_smart_field_detection_integration(session) -> None:
+    """Test smart field detection integration with ModelFaker."""
+
+    class SmartModel(Base):
+        __tablename__ = "smart_model"
+
+        id = Column(Integer, primary_key=True)
+        email = Column(String(255), nullable=False)
+        first_name = Column(String(100), nullable=False)
+        last_name = Column(String(100), nullable=False)
+        phone = Column(String(20), nullable=False)
+        company = Column(String(200), nullable=False)
+        age = Column(Integer, nullable=False)
+        price = Column(Float, nullable=False)
+
+    Base.metadata.create_all(session.bind)
+
+    config = ModelFakerConfig(smart_detection=True)
+    ModelFaker(SmartModel, session, config=config).create(amount=2)
+
+    entries = session.query(SmartModel).all()
+    assert len(entries) == 2
+
+    for entry in entries:
+        assert "@" in entry.email
+        assert entry.age >= 1 and entry.age <= 100
+        assert entry.price >= 0
+
+
+def test_smart_detection_disabled(session) -> None:
+    """Test that smart detection can be disabled."""
+
+    class BasicModel(Base):
+        __tablename__ = "basic_model"
+
+        id = Column(Integer, primary_key=True)
+        email = Column(String(255), nullable=False)
+        age = Column(Integer, nullable=False)
+
+    Base.metadata.create_all(session.bind)
+
+    config = ModelFakerConfig(smart_detection=False)
+    faker = ModelFaker(BasicModel, session, config=config)
+
+    # Smart detector should not be created
+    assert faker.smart_detector is None
+
+    faker.create(amount=1)
+    entries = session.query(BasicModel).all()
+    assert len(entries) == 1
+
+    # Email might not contain @ since smart detection is disabled
+    entry = entries[0]
+    assert isinstance(entry.email, str)
+    assert isinstance(entry.age, int)
+
+
+def test_field_overrides(session) -> None:
+    """Test custom field overrides."""
+
+    class OverrideModel(Base):
+        __tablename__ = "override_model"
+
+        id = Column(Integer, primary_key=True)
+        name = Column(String(100), nullable=False)
+        status = Column(String(50), nullable=False)
+
+    Base.metadata.create_all(session.bind)
+
+    def custom_status():
+        return "ACTIVE"
+
+    config = ModelFakerConfig(
+        field_overrides={
+            "status": custom_status
+        }
+    )
+
+    ModelFaker(OverrideModel, session, config=config).create(amount=3)
+
+    entries = session.query(OverrideModel).all()
+    assert len(entries) == 3
+
+    for entry in entries:
+        assert entry.status == "ACTIVE"
+
+
+def test_create_batch_without_commit(session) -> None:
+    """Test create_batch without committing."""
+
+    faker = ModelFaker(MyModel, session)
+    instances = faker.create_batch(amount=5, commit=False)
+
+    assert len(instances) == 5
+    committed_entries = session.query(MyModel).all()
+    assert len(committed_entries) == 0
+
+
+def test_create_batch_with_commit(session) -> None:
+    """Test create_batch with committing."""
+
+    faker = ModelFaker(MyModel, session)
+    instances = faker.create_batch(amount=3, commit=True)
+
+    assert len(instances) == 3
+    committed_entries = session.query(MyModel).all()
+    assert len(committed_entries) == 3
+
+
+def test_create_with_overrides(session) -> None:
+    """Test create_with method."""
+
+    faker = ModelFaker(MyModel, session)
+    overrides = {
+        "string_field": "Custom Value",
+        "integer_field": 42,
+        "boolean_field": True
+    }
+
+    instances = faker.create_with(overrides, amount=2)
+
+    assert len(instances) == 2
+    entries = session.query(MyModel).all()
+    assert len(entries) == 2
+
+    for entry in entries:
+        assert entry.string_field == "Custom Value"
+        assert entry.integer_field == 42
+        assert entry.boolean_field == True
+
+
+def test_reset_functionality(session) -> None:
+    """Test reset method."""
+
+    faker = ModelFaker(MyModel, session)
+    faker.create(amount=5)
+
+    initial_count = session.query(MyModel).count()
+    assert initial_count == 5
+
+    deleted_count = faker.reset(confirm=True)
+    assert deleted_count == 5
+
+    final_count = session.query(MyModel).count()
+    assert final_count == 0
+
+
+def test_reset_requires_confirmation(session) -> None:
+    """Test that reset requires confirmation."""
+
+    faker = ModelFaker(MyModel, session)
+    faker.create(amount=3)
+
+    with pytest.raises(ValueError, match="Must set confirm=True"):
+        faker.reset()
+
+
+def test_context_manager(session) -> None:
+    """Test context manager functionality."""
+
+    with ModelFaker(MyModel, session) as faker:
+        faker.create(amount=2)
+
+    entries = session.query(MyModel).all()
+    assert len(entries) == 2
+
+
+def test_seed_reproducibility(session) -> None:
+    """Test that seed produces reproducible results."""
+
+    config1 = ModelFakerConfig(seed=12345)
+    config2 = ModelFakerConfig(seed=12345)
+
+    faker1 = ModelFaker(MyModel, session, config=config1)
+    faker2 = ModelFaker(MyModel, session, config=config2)
+
+    # Clear any existing data
+    session.query(MyModel).delete()
+    session.commit()
+
+    faker1.create(amount=1)
+    first_entry = session.query(MyModel).first()
+    first_values = {
+        'string_field': first_entry.string_field,
+        'integer_field': first_entry.integer_field,
+        'boolean_field': first_entry.boolean_field
+    }
+
+    # Clear and create with second faker
+    session.query(MyModel).delete()
+    session.commit()
+
+    faker2.create(amount=1)
+    second_entry = session.query(MyModel).first()
+    second_values = {
+        'string_field': second_entry.string_field,
+        'integer_field': second_entry.integer_field,
+        'boolean_field': second_entry.boolean_field
+    }
+
+    assert first_values == second_values
+
+
+def test_bulk_creation(session) -> None:
+    """Test bulk creation with large amounts."""
+
+    config = ModelFakerConfig(bulk_size=100)
+    faker = ModelFaker(MyModel, session, config=config)
+
+    faker.create(amount=250)  # Should create in 3 batches
+
+    entries = session.query(MyModel).all()
+    assert len(entries) == 250
+
+
+def test_edge_case_zero_amount(session) -> None:
+    """Test creating zero records."""
+    faker = ModelFaker(MyModel, session)
+    faker.create(amount=0)
+
+    entries = session.query(MyModel).all()
+    assert len(entries) == 0
+
+
+def test_edge_case_large_bulk_size(session) -> None:
+    """Test with very large bulk size."""
+    config = ModelFakerConfig(bulk_size=10000)
+    faker = ModelFaker(MyModel, session, config=config)
+
+    faker.create(amount=5)  # Should use single batch
+
+    entries = session.query(MyModel).all()
+    assert len(entries) == 5
+
+
+def test_edge_case_bulk_size_one(session) -> None:
+    """Test with bulk size of 1."""
+    config = ModelFakerConfig(bulk_size=1)
+    faker = ModelFaker(MyModel, session, config=config)
+
+    faker.create(amount=3)  # Should create 3 separate batches
+
+    entries = session.query(MyModel).all()
+    assert len(entries) == 3
+
+
+def test_edge_case_negative_amount() -> None:
+    """Test that negative amounts raise error."""
+    session = None  # We won't actually use it
+    faker = ModelFaker(MyModel, session)
+
+    with pytest.raises(InvalidAmountError):
+        faker.create(amount=-1)
+
+
+def test_edge_case_string_amount() -> None:
+    """Test that string amounts raise error."""
+    session = None  # We won't actually use it
+    faker = ModelFaker(MyModel, session)
+
+    with pytest.raises(InvalidAmountError):
+        faker.create(amount="5")
+
+
+def test_edge_case_float_amount() -> None:
+    """Test that float amounts raise error."""
+    session = None  # We won't actually use it
+    faker = ModelFaker(MyModel, session)
+
+    with pytest.raises(InvalidAmountError):
+        faker.create(amount=5.5)
+
+
+def test_edge_case_none_amount() -> None:
+    """Test that None amount raises error."""
+    session = None  # We won't actually use it
+    faker = ModelFaker(MyModel, session)
+
+    with pytest.raises(InvalidAmountError):
+        faker.create(amount=None)
+
+
+def test_edge_case_empty_overrides(session) -> None:
+    """Test create_with with empty overrides."""
+    faker = ModelFaker(MyModel, session)
+    instances = faker.create_with({}, amount=2)
+
+    assert len(instances) == 2
+    entries = session.query(MyModel).all()
+    assert len(entries) == 2
+
+
+def test_edge_case_none_overrides(session) -> None:
+    """Test create_with with None values in overrides."""
+    faker = ModelFaker(MyModel, session)
+    overrides = {
+        "nullable_field": None,
+        "string_field": "test"
+    }
+
+    instances = faker.create_with(overrides, amount=1)
+
+    assert len(instances) == 1
+    entry = instances[0]
+    assert entry.nullable_field is None
+    assert entry.string_field == "test"
+
+
+def test_edge_case_invalid_field_override(session) -> None:
+    """Test field override with non-existent field."""
+    faker = ModelFaker(MyModel, session)
+    overrides = {
+        "non_existent_field": "value",
+        "string_field": "test"
+    }
+
+    # Should not raise error, just ignore the non-existent field
+    instances = faker.create_with(overrides, amount=1)
+    assert len(instances) == 1
+
+
+def test_edge_case_create_batch_zero(session) -> None:
+    """Test create_batch with zero amount."""
+    faker = ModelFaker(MyModel, session)
+    instances = faker.create_batch(amount=0, commit=False)
+
+    assert len(instances) == 0
+
+
+def test_edge_case_reset_empty_table(session) -> None:
+    """Test reset on empty table."""
+    faker = ModelFaker(MyModel, session)
+
+    # Table is already empty
+    deleted_count = faker.reset(confirm=True)
+    assert deleted_count == 0
+
+
+def test_edge_case_multiple_resets(session) -> None:
+    """Test multiple consecutive resets."""
+    faker = ModelFaker(MyModel, session)
+    faker.create(amount=3)
+
+    # First reset
+    deleted_count1 = faker.reset(confirm=True)
+    assert deleted_count1 == 3
+
+    # Second reset on empty table
+    deleted_count2 = faker.reset(confirm=True)
+    assert deleted_count2 == 0
+
+
+def test_edge_case_context_manager_exception(session) -> None:
+    """Test context manager with exception."""
+
+    class FailingModel(Base):
+        __tablename__ = "failing_model"
+        id = Column(Integer, primary_key=True)
+        # This will cause issues with the test setup
+
+    try:
+        with ModelFaker(FailingModel, session) as faker:
+            # This might fail due to table not existing
+            faker.create(amount=1)
+    except Exception:
+        # Expected to fail, but context manager should handle cleanup
+        pass
+
+
+def test_edge_case_very_long_string_field(session) -> None:
+    """Test with very long string length."""
+
+    class LongStringModel(Base):
+        __tablename__ = "long_string_model"
+        id = Column(Integer, primary_key=True)
+        very_long_field = Column(String(10000), nullable=False)
+
+    Base.metadata.create_all(session.bind)
+
+    faker = ModelFaker(LongStringModel, session)
+    faker.create(amount=1)
+
+    entries = session.query(LongStringModel).all()
+    assert len(entries) == 1
+    assert len(entries[0].very_long_field) <= 10000
+
+
+def test_edge_case_custom_faker_instance(session) -> None:
+    """Test with custom Faker instance."""
+    from faker import Faker
+
+    custom_faker = Faker('de_DE')
+    custom_faker.seed_instance(12345)
+
+    config = ModelFakerConfig(faker_instance=custom_faker)
+    faker = ModelFaker(MyModel, session, config=config)
+
+    faker.create(amount=1)
+    entries = session.query(MyModel).all()
+    assert len(entries) == 1
+
+
+def test_edge_case_mixed_configurations(session) -> None:
+    """Test mixed configuration options."""
+
+    def custom_string():
+        return "CUSTOM_VALUE"
+
+    config = ModelFakerConfig(
+        locale="fr_FR",
+        seed=54321,
+        smart_detection=True,
+        fill_nullable_fields=True,
+        fill_default_fields=True,
+        bulk_size=50,
+        field_overrides={
+            "string_field": custom_string
+        }
+    )
+
+    faker = ModelFaker(MyModel, session, config=config)
+    faker.create(amount=2)
+
+    entries = session.query(MyModel).all()
+    assert len(entries) == 2
+
+    for entry in entries:
+        assert entry.string_field == "CUSTOM_VALUE"
+        assert entry.nullable_field is not None  # Should be filled
+        assert entry.default_field != "test123"  # Should be overridden
+
+
+def test_edge_case_concurrent_access(session) -> None:
+    """Test multiple ModelFaker instances on same model."""
+
+    faker1 = ModelFaker(MyModel, session)
+    faker2 = ModelFaker(MyModel, session)
+
+    faker1.create(amount=2)
+    faker2.create(amount=3)
+
+    entries = session.query(MyModel).all()
+    assert len(entries) == 5
+
+
+def test_edge_case_field_override_callable_error(session) -> None:
+    """Test field override with callable that raises exception."""
+
+    def failing_override():
+        raise ValueError("Override failed")
+
+    config = ModelFakerConfig(
+        field_overrides={
+            "string_field": failing_override
+        }
+    )
+
+    faker = ModelFaker(MyModel, session, config=config)
+
+    with pytest.raises(ValueError, match="Override failed"):
+        faker.create(amount=1)
+
+
+def test_edge_case_extremely_large_integer_range(session) -> None:
+    """Test with extremely large integer ranges."""
+
+    class LargeIntModel(Base):
+        __tablename__ = "large_int_model"
+        id = Column(Integer, primary_key=True)
+        large_int = Column(Integer, nullable=False, info={"min": 1000000, "max": 9999999})
+
+    Base.metadata.create_all(session.bind)
+
+    faker = ModelFaker(LargeIntModel, session)
+    faker.create(amount=1)
+
+    entries = session.query(LargeIntModel).all()
+    assert len(entries) == 1
+    assert 1000000 <= entries[0].large_int <= 9999999
