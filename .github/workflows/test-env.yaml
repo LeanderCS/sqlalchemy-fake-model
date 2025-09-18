@@ -1,4 +1,4 @@
-name: Run Tests on all environments
+name: Run Tests on py versions
 
 on: [push]
 
@@ -11,19 +11,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-sqlalchemy-fake-model-env-${{ hashFiles('env_configs/Dockerfile') }}
+          key: ${{ runner.os }}-docker-sqlalchemy-fake-model-env-${{ hashFiles('env_configs/env.Dockerfile') }}
           restore-keys: |
             ${{ runner.os }}-docker-sqlalchemy-fake-model-env-
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
         with:
           driver-opts: image=moby/buildkit:latest
 
@@ -33,7 +32,7 @@ jobs:
             --cache-from=type=local,src=/tmp/.buildx-cache \
             --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
             -t sqlalchemy-fake-model-env \
-            -f env_configs/Dockerfile \
+            -f env_configs/env.Dockerfile \
             . --load
 
       - name: Run tests in Docker

@@ -3,7 +3,7 @@ services:
   sqlalchemy-fake-model:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: env_configs/Dockerfile
     container_name: sqlalchemy-fake-model
     volumes:
       - .:/app

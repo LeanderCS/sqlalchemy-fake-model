@@ -4,27 +4,50 @@ on:
   release:
     types: [published]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  publish:
+  build-sdist:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: 3.11
 
       - name: Install build tools
-        run: pip install build twine wheel
+        run: pip install build
 
       - name: Build package
-        run: python setup.py sdist bdist_wheel
+        run: python -m build --sdist
 
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-sdist
+          path: ./dist/*.tar.gz
+
+  publish:
+    needs: [build-sdist]
+    runs-on: ubuntu-latest
+
+    environment:
+      name: release
+      url: https://pypi.org/project/sqlalchemy-fake-model
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

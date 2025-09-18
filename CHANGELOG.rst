@@ -3,6 +3,20 @@ Changelog
 
 All notable changes to this project will be documented in this file.
 
+[0.1.0] - 2025-09-18
+--------------------
+
+Added
+^^^^^
+
+- Added support for python 3.14
+
+Changed
+^^^^^^^
+
+-
+
+
 [0.0.1] - 2025-03-01
 --------------------
 

@@ -1,11 +1,49 @@
 sqlalchemy-fake-model
 =====================
 
-``ModelFaker`` is a utility that generates fake data for SQLAlchemy models.
-It leverages the power of the Faker library to create realistic yet random data that can be used
-to populate your database during development or for testing your application's functionality.
+.. image:: https://img.shields.io/pypi/v/sqlalchemy-fake-model?style=flat-square&label=version
+    :target: https://pypi.org/project/sqlalchemy-fake-model/
+    :alt: PyPI Version
 
-It supports a wide range of data types, including basic types, enums, and relationships between models.
+.. image:: https://img.shields.io/pypi/pyversions/sqlalchemy-fake-model
+    :target: https://pypi.org/project/sqlalchemy-fake-model/
+    :alt: Python Versions
+
+.. image:: https://img.shields.io/github/license/LeanderCS/sqlalchemy-fake-model
+    :target: https://github.com/LeanderCS/sqlalchemy-fake-model/blob/main/LICENSE
+    :alt: License
+
+.. image:: https://img.shields.io/github/actions/workflow/status/LeanderCS/sqlalchemy-fake-model/test.yaml?branch=main&style=flat-square&label=tests
+    :target: https://github.com/LeanderCS/sqlalchemy-fake-model/actions
+    :alt: Tests
+
+.. image:: https://img.shields.io/coveralls/LeanderCS/sqlalchemy-fake-model/main.svg?style=flat-square&label=coverage
+    :target: https://coveralls.io/r/LeanderCS/sqlalchemy-fake-model
+    :alt: Coverage
+
+.. image:: https://static.pepy.tech/badge/sqlalchemy-fake-model/month
+    :target: https://pypi.org/project/sqlalchemy-fake-model/
+    :alt: Monthly Downloads
+
+.. image:: https://static.pepy.tech/badge/sqlalchemy-fake-model
+    :target: https://pypi.org/project/sqlalchemy-fake-model/
+    :alt: Total Downloads
+
+Description
+-----------
+
+``ModelFaker`` is a powerful utility that generates realistic fake data for SQLAlchemy models.
+It leverages the Faker library to create structured, random data that's perfect for
+development, testing, and database seeding.
+
+**Key Features:**
+
+- Support for all common SQLAlchemy data types
+- Automatic relationship handling (OneToOne, OneToMany, ManyToMany)
+- Custom data format generation with JSON support
+- Framework integration (Flask, Django, Tornado)
+- Configurable min/max values and constraints
+- Nullable field support with intelligent defaults
 
 Thank you for using ``sqlalchemy-fake-model``!
 ==============================================
@@ -14,30 +52,6 @@ If you have any questions or suggestions, please feel free to open an issue on G
 
 If you don't want to miss any updates, please star the repository.
 This will help me to understand how many people are interested in this project.
-
-:Test Status:
-
-    .. image:: https://img.shields.io/github/actions/workflow/status/LeanderCS/sqlalchemy-fake-model/test.yaml?branch=main&style=flat-square&label=Github%20Actions
-        :target: https://github.com/LeanderCS/sqlalchemy-fake-model/actions
-    .. image:: https://img.shields.io/coveralls/LeanderCS/sqlalchemy-fake-model/main.svg?style=flat-square&label=Coverage
-        :target: https://coveralls.io/r/LeanderCS/sqlalchemy-fake-model
-
-:Version Info:
-
-    .. image:: https://img.shields.io/pypi/v/sqlalchemy-fake-model?style=flat-square&label=PyPI
-        :target: https://pypi.org/project/sqlalchemy-fake-model/
-
-:Compatibility:
-
-    .. image:: https://img.shields.io/pypi/pyversions/sqlalchemy-fake-model?style=flat-square&label=PyPI
-        :target: https://pypi.org/project/sqlalchemy-fake-model/
-
-:Downloads:
-
-    .. image:: https://static.pepy.tech/badge/sqlalchemy-fake-model/month
-        :target: https://pypi.org/project/sqlalchemy-fake-model/
-    .. image:: https://static.pepy.tech/badge/sqlalchemy-fake-model
-        :target: https://pypi.org/project/sqlalchemy-fake-model/
 
 Installation
 ============
@@ -57,24 +71,28 @@ you can leave the session empty and the module will try to get the session from 
 Usage
 -----
 
-For all type of appications:
+**Basic Usage:**
 
 .. code-block:: python
 
     from sqlalchemy_fake_model import ModelFaker
-    from path-to-model import Users
-    from path-to-session import session
+    from your_app.models import User
+    from your_app.database import session
 
-    ModelFaker(Users, session).create(5)
+    # Create 5 fake users with explicit session
+    ModelFaker(User, session).create(5)
 
-For appications using one of the `Supported Frameworks`_:
+**Framework Integration:**
+
+For applications using Flask, Django, or Tornado:
 
 .. code-block:: python
 
     from sqlalchemy_fake_model import ModelFaker
-    from path-to-model import Users
+    from your_app.models import User
 
-    ModelFaker(Users).create(5)
+    # Session is automatically detected
+    ModelFaker(User).create(5)
 
 Set-up Models
 =============
@@ -197,38 +215,36 @@ It also allows a default enum value:
 Define relationships
 --------------------
 
-The `ModelFaker` module supports relationships between models. You can define relationships between models,
-and it will generate the corresponding other part of those relationship.
+ModelFaker automatically handles relationships between models, creating the necessary related records
+to maintain referential integrity. It supports all SQLAlchemy relationship types:
 
-It supports the following relationship types:
+- **OneToOne** - Creates one related record
+- **OneToMany** - Creates multiple related records
+- **ManyToMany** - Creates and links multiple records through association tables
 
-1. `OneToOne` - Generates random values for a one-to-one relationship.
-2. `OneToMany` - Generates random values for a one-to-many relationship.
-3. `ManyToMany` - Generates random values for a many-to-many relationship.
-
-Example implementation of relationships
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Following example would result in a creation of an entry for the users table to set up the relationship:
+**Example - User with Messages:**
 
 .. code-block:: python
 
     class User(Base):
         __tablename__ = "users"
 
-        id: Column[Integer] = db.Column(
-            db.Integer,
-            primary_key=True
-        )
+        id: Column[Integer] = Column(Integer, primary_key=True)
+        name: Column[String] = Column(String(100))
+        messages = relationship("Message", back_populates="user")
 
     class Message(Base):
-        user_id: Column[Integer] = db.Column(
-            db.Integer,
-            db.ForeignKey("users.id"),
-            nullable=False
-        )
+        __tablename__ = "messages"
 
-It is also allowed to use different types as primary key.
+        id: Column[Integer] = Column(Integer, primary_key=True)
+        content: Column[String] = Column(String(500))
+        user_id: Column[Integer] = Column(Integer, ForeignKey("users.id"))
+        user = relationship("User", back_populates="messages")
+
+    # This automatically creates users for each message
+    ModelFaker(Message).create(10)
+
+**Note:** Different primary key types (UUID, String, etc.) are fully supported.
 
 Define custom data format
 -------------------------
@@ -261,15 +277,40 @@ Another example would result in a json object eg. object in the database:
     )
 
 Supported Frameworks
---------------------
+====================
 
-The `ModelFaker` module is able to detect the sqlalchemy session
-automatically for the following frameworks:
+ModelFaker provides seamless integration with popular web frameworks by automatically
+detecting and using their SQLAlchemy sessions:
 
-1. `Flask`
-2. `Django`
-3. `Torando`
+**Supported Frameworks:**
 
-If you are using one of these frameworks, you can simply leave the session empty and
-the module will try to get thesession from the framework.
-If not you have to pass the db session as a parameter.
+- **Flask** - Flask-SQLAlchemy integration
+- **Django** - Django ORM integration
+- **Tornado** - Tornado SQLAlchemy integration
+
+**How it works:**
+
+When using supported frameworks, ModelFaker automatically detects the current session
+context, eliminating the need to manually pass session objects:
+
+.. code-block:: python
+
+    # In a Flask application
+    @app.route('/seed-data')
+    def seed_data():
+        # No session needed - automatically detected
+        ModelFaker(User).create(100)
+        return "Data seeded successfully!"
+
+**Manual Session:**
+
+For other frameworks or custom setups, pass the session explicitly:
+
+.. code-block:: python
+
+    from sqlalchemy.orm import sessionmaker
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    ModelFaker(User, session).create(100)

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "Adding additional annotations"
+find /app/flask_inputfilter -name "*.py" ! -name "__init__.py" | while read -r file; do
+  if ! grep -q "^from __future__ import annotations" "$file"; then
+    sed -i '1i from __future__ import annotations' "$file"
+  fi
+done
+
+echo "Running Ruff (lint and fix)"
+ruff check --fix /app
+ruff format /app

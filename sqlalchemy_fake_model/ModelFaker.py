@@ -100,13 +100,13 @@ class ModelFaker:
             for _ in range(amount):
                 data = {}
 
-                for column in self.__getTableColumns():
-                    if self.__shouldSkipField(column):
+                for column in self.__get_table_columns():
+                    if self.__should_skip_field(column):
                         continue
 
-                    data[column.name] = self._generateFakeData(column)
+                    data[column.name] = self._generate_fake_data(column)
 
-                if self.__isManyToManyRelationTable():
+                if self.__is_many_to_many_relation_table():
                     self.db.execute(self.model.insert().values(**data))
 
                 else:
@@ -120,7 +120,7 @@ class ModelFaker:
                 f"Failed to commit: {e} {traceback.format_exc()}"
             )
 
-    def _generateFakeData(
+    def _generate_fake_data(
         self, column: Column
     ) -> Optional[Union[str, int, bool, date, datetime, None]]:
         """
@@ -132,32 +132,32 @@ class ModelFaker:
             needs to be generated.
         :return: The fake data generated for the column.
         """
-        columnType = column.type
+        column_type = column.type
 
         if column.doc:
-            return str(self._generateJsonData(column.doc))
+            return str(self._generate_json_data(column.doc))
 
         # Enum has to be the first type to check, or otherwise it
         # uses the options of the corresponding type of the enum options
-        elif isinstance(columnType, ModelColumnTypesEnum.ENUM.value):
-            return random.choice(columnType.enums)
+        if isinstance(column_type, ModelColumnTypesEnum.ENUM.value):
+            return random.choice(column_type.enums)
 
-        elif column.foreign_keys:
+        if column.foreign_keys:
             related_attribute = list(column.foreign_keys)[0].column.name
             return getattr(
-                self.__handleRelationship(column), related_attribute
+                self.__handle_relationship(column), related_attribute
             )
 
-        elif column.primary_key:
-            return self._generatePrimitive(columnType)
+        if column.primary_key:
+            return self._generate_primitive(column_type)
 
-        elif isinstance(columnType, ModelColumnTypesEnum.STRING.value):
-            maxLength = (
-                columnType.length if hasattr(columnType, "length") else 255
+        if isinstance(column_type, ModelColumnTypesEnum.STRING.value):
+            max_length = (
+                column_type.length if hasattr(column_type, "length") else 255
             )
-            return self.faker.text(max_nb_chars=maxLength)
+            return self.faker.text(max_nb_chars=max_length)
 
-        elif isinstance(columnType, ModelColumnTypesEnum.INTEGER.value):
+        if isinstance(column_type, ModelColumnTypesEnum.INTEGER.value):
             info = column.info
             if not info:
                 return self.faker.random_int()
@@ -166,8 +166,8 @@ class ModelFaker:
             max_value = column.info.get("max", 100)
             return self.faker.random_int(min=min_value, max=max_value)
 
-        elif isinstance(columnType, ModelColumnTypesEnum.FLOAT.value):
-            precision = getattr(columnType, "precision")
+        if isinstance(column_type, ModelColumnTypesEnum.FLOAT.value):
+            precision = column_type.precision
             if not precision:
                 return self.faker.pyfloat()
 
@@ -177,29 +177,29 @@ class ModelFaker:
                 precision[1],
             )
 
-        elif isinstance(columnType, ModelColumnTypesEnum.BOOLEAN.value):
+        if isinstance(column_type, ModelColumnTypesEnum.BOOLEAN.value):
             return self.faker.boolean()
 
-        elif isinstance(columnType, ModelColumnTypesEnum.DATE.value):
+        if isinstance(column_type, ModelColumnTypesEnum.DATE.value):
             return self.faker.date_object()
 
-        elif isinstance(columnType, ModelColumnTypesEnum.DATETIME.value):
+        if isinstance(column_type, ModelColumnTypesEnum.DATETIME.value):
             return self.faker.date_time()
 
         return None
 
-    def __handleRelationship(self, column: Column) -> Optional[Table]:
+    def __handle_relationship(self, column: Column) -> Optional[Table]:
         """
         Handles the relationship of a column with another model.
         It creates a fake data entry for the parent model and returns its id.
         """
-        parentModel = self.__getRelatedClass(column)
+        parent_model = self.__get_related_class(column)
 
-        ModelFaker(parentModel, self.db).create()
+        ModelFaker(parent_model, self.db).create()
 
-        return self.db.query(parentModel).first()
+        return self.db.query(parent_model).first()
 
-    def __isManyToManyRelationTable(self) -> bool:
+    def __is_many_to_many_relation_table(self) -> bool:
         """
         Checks if the model is a many-to-many relationship table.
         """
@@ -207,18 +207,18 @@ class ModelFaker:
             self.model, "__mapper__"
         )
 
-    def __shouldSkipField(self, column: Column) -> bool:
+    def __should_skip_field(self, column: Column) -> bool:
         """
         Checks if a column is a primary key or has a default value.
         """
         return (
-            (column.primary_key and self.__isFieldAutoIncrement(column))
-            or self.__hasFieldDefaultValue(column)
-            or self.__isFieldNullable(column)
+            (column.primary_key and self.__is_field_auto_increment(column))
+            or self.__has_field_default_value(column)
+            or self.__is_field_nullable(column)
         )
 
     @staticmethod
-    def __isFieldAutoIncrement(column: Column) -> bool:
+    def __is_field_auto_increment(column: Column) -> bool:
         """
         Checks if a column is autoincrement.
         """
@@ -226,7 +226,7 @@ class ModelFaker:
             column.type, ModelColumnTypesEnum.INTEGER.value
         )
 
-    def __hasFieldDefaultValue(self, column: Column) -> bool:
+    def __has_field_default_value(self, column: Column) -> bool:
         """
         Checks if a column has a default value.
         """
@@ -236,7 +236,7 @@ class ModelFaker:
             and not self.config.fill_default_fields
         )
 
-    def __isFieldNullable(self, column: Column) -> bool:
+    def __is_field_nullable(self, column: Column) -> bool:
         """
         Checks if a column is nullable.
         """
@@ -246,24 +246,24 @@ class ModelFaker:
             and not self.config.fill_nullable_fields
         )
 
-    def __getTableColumns(self) -> List[Column]:
+    def __get_table_columns(self) -> List[Column]:
         """
         Returns the columns of the model's table.
         """
         return (
             self.model.columns
-            if self.__isManyToManyRelationTable()
+            if self.__is_many_to_many_relation_table()
             else self.model.__table__.columns
         )
 
-    def __getRelatedClass(self, column: Column) -> Table:
+    def __get_related_class(self, column: Column) -> Table:
         """
         Returns the related class of a column if it has
         a relationship with another model.
         """
         if (
-            not self.__isManyToManyRelationTable()
-            and column.name in self.model.__mapper__.relationships.keys()
+            not self.__is_many_to_many_relation_table()
+            and column.name in self.model.__mapper__.relationships
         ):
             return self.model.__mapper__.relationships[
                 column.key
@@ -273,15 +273,15 @@ class ModelFaker:
 
         return fk.column.table
 
-    def _generateJsonData(self, docstring: str) -> Dict[str, Any]:
+    def _generate_json_data(self, docstring: str) -> Dict[str, Any]:
         """
         Generates JSON data based on the provided docstring.
         """
         json_structure = json.loads(docstring)
 
-        return self._populateJsonStructure(json_structure)
+        return self._populate_json_structure(json_structure)
 
-    def _populateJsonStructure(
+    def _populate_json_structure(
         self, structure: Union[Dict[str, Any], List[Any]]
     ) -> Any:
         """
@@ -290,36 +290,36 @@ class ModelFaker:
         """
         if isinstance(structure, dict):
             return {
-                key: self._populateJsonStructure(value)
+                key: self._populate_json_structure(value)
                 if isinstance(value, (dict, list))
-                else self._generatePrimitive(value)
+                else self._generate_primitive(value)
                 for key, value in structure.items()
             }
 
-        elif isinstance(structure, list):
+        if isinstance(structure, list):
             return [
-                self._populateJsonStructure(item)
+                self._populate_json_structure(item)
                 if isinstance(item, (dict, list))
-                else self._generatePrimitive(item)
+                else self._generate_primitive(item)
                 for item in structure
             ]
 
         return structure
 
-    def _generatePrimitive(self, primitive_type: str) -> Any:
+    def _generate_primitive(self, primitive_type: str) -> Any:
         """
         Generates fake data for primitive types.
         """
         if primitive_type == "boolean":
             return self.faker.boolean()
-        elif primitive_type == "datetime":
+        if primitive_type == "datetime":
             return self.faker.date_time().isoformat()
-        elif primitive_type == "date":
+        if primitive_type == "date":
             return self.faker.date()
-        elif primitive_type == "integer":
+        if primitive_type == "integer":
             return self.faker.random_int()
-        elif primitive_type == "string":
+        if primitive_type == "string":
             return self.faker.word()
-        elif primitive_type == "float":
+        if primitive_type == "float":
             return self.faker.pyfloat()
         return self.faker.word()

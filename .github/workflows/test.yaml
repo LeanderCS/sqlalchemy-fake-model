@@ -18,12 +18,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-sqlalchemy-fake-model-test-${{ hashFiles('Dockerfile') }}
+          key: ${{ runner.os }}-docker-sqlalchemy-fake-model-test-${{ hashFiles('env_configs/Dockerfile') }}
           restore-keys: |
             ${{ runner.os }}-docker-sqlalchemy-fake-model-test-
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
         with:
           driver-opts: image=moby/buildkit:latest
 
@@ -32,7 +32,7 @@ jobs:
           docker buildx build \
             --cache-from=type=local,src=/tmp/.buildx-cache \
             --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-            -t sqlalchemy-fake-model-test . --load
+            -t sqlalchemy-fake-model-test -f env_configs/Dockerfile . --load
 
       - name: Run tests in Docker and upload coverage to Coveralls
         env:
@@ -49,5 +49,5 @@ jobs:
           set -x # Print commands and their arguments as they are executed
           set -e # Exit immediately if a command exits with a non-zero status
           set -u # Exit immediately if a variable is not defined
-      
-          docker run sqlalchemy-fake-model-test flake8
+
+          docker run --rm sqlalchemy-fake-model-test ruff check

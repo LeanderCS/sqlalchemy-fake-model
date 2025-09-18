@@ -1,0 +1,44 @@
+name: Build and Test Library
+
+on: [push]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install build tools and test dependencies
+        run: pip install build pytest SQLAlchemy Faker
+
+      - name: Build the library
+        run: python -m build
+        id: build
+
+      - name: Install built library
+        run: |
+          pip install "$(ls dist/*.tar.gz | head -n 1)"
+          rm -rf sqlalchemy_fake_model
+
+      - name: Verify library usage - Part I - installation
+        run: |
+          python -c "from sqlalchemy_fake_model import ModelFaker"
+
+      - name: Verify library usage - Part II - functional test
+        run: pytest test/
+
+      - name: Verify library usage - Part III - correct version
+        run: |
+          output=$(python -c "from sqlalchemy_fake_model import ModelFaker; print(ModelFaker)")
+
+          if [[ "$output" == *"ModelFaker"* ]]; then
+            echo "Test passed: Correct class returned"
+          else
+            echo "Test failed: Unexpected output - $output"
+            exit 1
+          fi
