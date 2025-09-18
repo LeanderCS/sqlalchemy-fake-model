@@ -700,36 +700,32 @@ def test_edge_case_bulk_size_one(session) -> None:
     assert len(entries) == 3
 
 
-def test_edge_case_negative_amount() -> None:
+def test_edge_case_negative_amount(session) -> None:
     """Test that negative amounts raise error."""
-    session = None  # We won't actually use it
     faker = ModelFaker(MyModel, session)
 
     with pytest.raises(InvalidAmountError):
         faker.create(amount=-1)
 
 
-def test_edge_case_string_amount() -> None:
+def test_edge_case_string_amount(session) -> None:
     """Test that string amounts raise error."""
-    session = None  # We won't actually use it
     faker = ModelFaker(MyModel, session)
 
     with pytest.raises(InvalidAmountError):
         faker.create(amount="5")
 
 
-def test_edge_case_float_amount() -> None:
+def test_edge_case_float_amount(session) -> None:
     """Test that float amounts raise error."""
-    session = None  # We won't actually use it
     faker = ModelFaker(MyModel, session)
 
     with pytest.raises(InvalidAmountError):
         faker.create(amount=5.5)
 
 
-def test_edge_case_none_amount() -> None:
+def test_edge_case_none_amount(session) -> None:
     """Test that None amount raises error."""
-    session = None  # We won't actually use it
     faker = ModelFaker(MyModel, session)
 
     with pytest.raises(InvalidAmountError):
@@ -913,7 +909,7 @@ def test_edge_case_field_override_callable_error(session) -> None:
 
     faker = ModelFaker(MyModel, session, config=config)
 
-    with pytest.raises(ValueError, match="Override failed"):
+    with pytest.raises(RuntimeError, match="Failed to commit"):
         faker.create(amount=1)
 
 

@@ -123,9 +123,9 @@ class ModelFaker:
         in case of any errors.
 
         :param amount: The number of fake data entries to create.
-        :raises InvalidAmountError: If the amount is not an integer.
+        :raises InvalidAmountError: If the amount is not an integer or negative.
         """
-        if not isinstance(amount, int):
+        if not isinstance(amount, int) or amount < 0:
             raise InvalidAmountError(amount)
 
         if amount <= self.config.bulk_size:
