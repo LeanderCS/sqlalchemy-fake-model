@@ -18,9 +18,9 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.types import DECIMAL
 
 try:
-    from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
+    from sqlalchemy.dialects.postgresql import UUID as POSTGRESQL_UUID
 except ImportError:
-    PostgreSQLUUID = None
+    POSTGRESQL_UUID = None
 
 
 class ModelColumnTypesEnum(Enum):
@@ -48,7 +48,7 @@ class ModelColumnTypesEnum(Enum):
 
     LARGEBINARY = LargeBinary
 
-    UUID = UUID if PostgreSQLUUID else String
+    UUID = UUID if POSTGRESQL_UUID else String
 
     JSON = JSON
 

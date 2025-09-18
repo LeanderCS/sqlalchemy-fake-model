@@ -22,23 +22,29 @@ class SmartFieldDetector:
         field_name = column.name.lower()
         column_type = column.type
 
-        # Email fields (specific patterns only)
-        if (field_name == "email" or
-            field_name.endswith("_email") or
-            field_name == "email_address" or
-            (field_name.startswith("email_") and field_name in ["email_addr", "email_id"])):
+        if (
+            field_name == "email"
+            or field_name.endswith("_email")
+            or field_name == "email_address"
+            or (
+                field_name.startswith("email_")
+                and field_name in ["email_addr", "email_id"]
+            )
+        ):
             return self.faker.email()
 
-        # Name fields (specific patterns first, then general)
         if "first_name" in field_name or "firstname" in field_name:
             return self.faker.first_name()
         if "last_name" in field_name or "lastname" in field_name:
             return self.faker.last_name()
-        if (field_name in ["name", "full_name", "fullname"] or
-            field_name in ["display_name", "user_name", "real_name", "person_name"]):
+        if field_name in ["name", "full_name", "fullname"] or field_name in [
+            "display_name",
+            "user_name",
+            "real_name",
+            "person_name",
+        ]:
             return self.faker.name()
 
-        # Address fields
         if "address" in field_name:
             return self.faker.address()
         if "street" in field_name:
@@ -52,23 +58,18 @@ class SmartFieldDetector:
         if "country" in field_name:
             return self.faker.country()
 
-        # Phone fields
         if "phone" in field_name or "tel" in field_name:
             return self.faker.phone_number()
 
-        # URL fields
         if "url" in field_name or "website" in field_name:
             return self.faker.url()
 
-        # Company fields
         if "company" in field_name or "organization" in field_name:
             return self.faker.company()
 
-        # Title/Job fields
         if "title" in field_name or "job" in field_name:
             return self.faker.job()
 
-        # Description/Bio fields
         if (
             "description" in field_name
             or "bio" in field_name
@@ -76,21 +77,17 @@ class SmartFieldDetector:
         ):
             return self.faker.text(max_nb_chars=500)
 
-        # Username fields
         if "username" in field_name or "user_name" in field_name:
             return self.faker.user_name()
 
-        # Password fields (hashed)
         if "password" in field_name:
             return self.faker.sha256()
 
-        # Date/Time specific fields
         if "birth" in field_name or "born" in field_name:
             return self.faker.date_of_birth()
         if "created" in field_name or "updated" in field_name:
             return self.faker.date_time_this_year()
 
-        # Price/Money fields
         if (
             "price" in field_name
             or "cost" in field_name
@@ -104,11 +101,9 @@ class SmartFieldDetector:
                 left_digits=5, right_digits=2, positive=True
             )
 
-        # Age fields
         if "age" in field_name:
             return self.faker.random_int(min=1, max=100)
 
-        # Score/Rating fields
         if "score" in field_name or "rating" in field_name:
             return self.faker.random_int(min=1, max=10)
 

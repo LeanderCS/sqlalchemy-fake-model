@@ -18,7 +18,8 @@ class ModelFakerConfig:
     :param max_retries: Maximum retries for unique constraint violations.
     :param bulk_size: Number of records to insert in a single batch.
     :param field_overrides: Custom generators for specific fields.
-    :param smart_detection: Enable smart field name detection for realistic data.
+    :param smart_detection: Enable smart field name detection for realistic
+        data.
     :param faker_instance: Custom Faker instance to use.
     """
 

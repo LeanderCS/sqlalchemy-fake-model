@@ -58,7 +58,7 @@ Issues = "https://github.com/LeanderCS/sqlalchemy-fake-model/issues"
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["sqlalchemy_fake_model"]
+include = ["sqlalchemy_fake_model*"]
 
 [tool.pytest.ini_options]
 filterwarnings = [
@@ -83,14 +83,14 @@ commands =
 source = ["sqlalchemy_fake_model"]
 
 [tool.coverage.report]
-omit = ["__init__.py", "*/test/*"]
+omit = ["__init__.py", "*/tests/*"]
 
 [tool.ruff]
 line-length = 79
 target-version = "py37"
 fix = true
 exclude = [
-    "test",
+    "tests",
 ]
 
 [tool.ruff.lint]
@@ -124,6 +124,7 @@ ignore = [
     "UP006",  # Use `list` instead of `List` (Python 3.9+)
     "UP007",  # Use `X | Y` for unions (Python 3.10+)
     "UP035",  # Import from collections.abc (Python 3.9+)
+    "N999",   # Invalid module name (module naming convention)
 ]
 
 [tool.ruff.lint.isort]

@@ -14,7 +14,7 @@ jobs:
           python-version: 3.11
 
       - name: Install build tools and test dependencies
-        run: pip install build pytest SQLAlchemy Faker
+        run: pip install build pytest SQLAlchemy Faker flask tornado django flask-sqlalchemy
 
       - name: Build the library
         run: python -m build
@@ -30,7 +30,7 @@ jobs:
           python -c "from sqlalchemy_fake_model import ModelFaker"
 
       - name: Verify library usage - Part II - functional test
-        run: pytest test/
+        run: pytest tests/
 
       - name: Verify library usage - Part III - correct version
         run: |

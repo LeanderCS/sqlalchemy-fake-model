@@ -10,10 +10,9 @@ from sqlalchemy import Column, ColumnDefault, Table
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import ColumnProperty, Session
 
-from .Enum.ModelColumnTypesEnum import ModelColumnTypesEnum
-from .Error.InvalidAmountError import InvalidAmountError
-from .Error.UniquenessError import UniquenessError
-from .Model.ModelFakerConfig import ModelFakerConfig
+from .Enum import ModelColumnTypesEnum
+from .Error import InvalidAmountError, UniquenessError
+from .Model import ModelFakerConfig
 from .SmartFieldDetector import SmartFieldDetector
 
 
@@ -90,8 +89,19 @@ class ModelFaker:
         try:
             from flask import current_app
 
-            return current_app.extensions["sqlalchemy"].db.session
-        except (ImportError, KeyError):
+            if "sqlalchemy" in current_app.extensions:
+                db_ext = current_app.extensions["sqlalchemy"]
+
+                # In Flask-SQLAlchemy >= 2.0, the db object is the extension
+                # itself
+                if hasattr(db_ext, "session"):
+                    return db_ext.session
+
+                # Some versions might have a different structure
+                if hasattr(db_ext, "db") and hasattr(db_ext.db, "session"):
+                    return db_ext.db.session
+
+        except (ImportError, KeyError, AttributeError):
             pass
 
         try:
@@ -123,7 +133,8 @@ class ModelFaker:
         in case of any errors.
 
         :param amount: The number of fake data entries to create.
-        :raises InvalidAmountError: If the amount is not an integer or negative.
+        :raises InvalidAmountError: If the amount is not an integer or
+            negative.
         """
         if not isinstance(amount, int) or amount < 0:
             raise InvalidAmountError(amount)
@@ -211,7 +222,7 @@ class ModelFaker:
             return random.choice(column_type.enums)
 
         if column.foreign_keys:
-            related_attribute = list(column.foreign_keys)[0].column.name
+            related_attribute = next(iter(column.foreign_keys)).column.name
             return getattr(
                 self.__handle_relationship(column), related_attribute
             )
@@ -380,7 +391,7 @@ class ModelFaker:
                 column.key
             ].mapper.class_
 
-        fk = list(column.foreign_keys)[0]
+        fk = next(iter(column.foreign_keys))
 
         return fk.column.table
 

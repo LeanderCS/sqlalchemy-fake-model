@@ -42,7 +42,7 @@ jobs:
           set -e # Exit immediately if a command exits with a non-zero status.
           set -u # Exit immediately if a variable is not defined.
 
-          docker run --rm -e COVERALLS_REPO_TOKEN=${{ secrets.COVERALLS_REPO_TOKEN }} sqlalchemy-fake-model-test sh -c "coverage run --source=sqlalchemy_fake_model -m pytest test/ && coveralls"
+          docker run --rm -e COVERALLS_REPO_TOKEN=${{ secrets.COVERALLS_REPO_TOKEN }} sqlalchemy-fake-model-test sh -c "coverage run --source=sqlalchemy_fake_model -m pytest tests/ && coveralls"
 
       - name: Run code style checks
         run: |
