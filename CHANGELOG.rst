@@ -3,12 +3,13 @@ Changelog
 
 All notable changes to this project will be documented in this file.
 
-[0.2.0] - 2025-09-18
+[0.1.0] - 2025-09-19
 --------------------
 
 Added
 ^^^^^
 
+- Added support for python 3.14
 **New Data Types Support:**
 - UUID fields with automatic UUID generation
 - JSON/JSONB fields with structured data generation
@@ -88,19 +89,6 @@ Fixed
 - Better handling of enum fields with complex structures
 - Fixed memory leaks in bulk operations
 - Improved error handling for malformed JSON in doc strings
-
-[0.1.0] - 2025-09-18
---------------------
-
-Added
-^^^^^
-
-- Added support for python 3.14
-
-Changed
-^^^^^^^
-
--
 
 
 [0.0.1] - 2025-03-01
