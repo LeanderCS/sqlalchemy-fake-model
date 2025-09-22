@@ -32,7 +32,6 @@ RUN echo 'export PATH="/root/.pyenv/bin:$PATH"' >> ~/.bashrc \
     && echo 'eval "$(pyenv init --path)"' >> ~/.bashrc \
     && echo 'eval "$(pyenv init -)"' >> ~/.bashrc \
     && echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc \
-    && /root/.pyenv/bin/pyenv install 3.6 \
     && /root/.pyenv/bin/pyenv install 3.7.12 \
     && /root/.pyenv/bin/pyenv install 3.8.12 \
     && /root/.pyenv/bin/pyenv install 3.9.7 \
@@ -41,7 +40,7 @@ RUN echo 'export PATH="/root/.pyenv/bin:$PATH"' >> ~/.bashrc \
     && /root/.pyenv/bin/pyenv install 3.12.0 \
     && /root/.pyenv/bin/pyenv install 3.13.0 \
     && /root/.pyenv/bin/pyenv install 3.14-dev \
-    && /root/.pyenv/bin/pyenv global 3.6 3.7.12 3.8.12 3.9.7 3.10.2 3.11.0 3.12.0 3.13.0 3.14-dev
+    && /root/.pyenv/bin/pyenv global 3.7.12 3.8.12 3.9.7 3.10.2 3.11.0 3.12.0 3.13.0 3.14-dev
 
 COPY pyproject.toml /app
 

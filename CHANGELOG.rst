@@ -74,6 +74,7 @@ Added
 Changed
 ^^^^^^^
 
+- Dropped support for Python 3.6
 - **BREAKING**: Enhanced ``ModelFakerConfig`` with new parameters (backward compatible with defaults)
 - **BREAKING**: ``create()`` method now uses bulk operations for amounts > bulk_size
 - Improved JSON data structure generation with more realistic nested objects

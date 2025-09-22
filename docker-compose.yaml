@@ -1,6 +1,16 @@
 services:
 
-  sqlalchemy-fake-model:
+  env:
+    build:
+      context: .
+      dockerfile: env_configs/env.Dockerfile
+    container_name: sqlalchemy-fake-model-env
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true
+
+  pure:
     build:
       context: .
       dockerfile: env_configs/Dockerfile

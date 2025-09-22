@@ -10,7 +10,7 @@ readme = "README.rst"
 keywords = [
     "sqlalchemy", "faker", "fake", "data", "model", "database", "testing", "generation"
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.7"
 license = {text = "MIT"}
 authors = [
     {name = "Leander Cain Slotosch", email = "slotosch.leander@outlook.de"}
@@ -30,7 +30,6 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.6",
 ]
 
 [project.optional-dependencies]
@@ -69,7 +68,7 @@ addopts = "--tb=short -q"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py36, py37, py38, py39, py310, py311, py312, py313, py314
+envlist = py37, py38, py39, py310, py311, py312, py313, py314
 
 [testenv]
 deps =
