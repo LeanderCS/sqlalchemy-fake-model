@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "sqlalchemy-fake-model"
 version = "0.1.0"
 description = "A library to generate complex fake database-entries based on SQLAlchemy models"
-readme = "README.rst"
+readme = "README.md"
 keywords = [
     "sqlalchemy", "faker", "fake", "data", "model", "database", "testing", "generation"
 ]
@@ -22,7 +22,6 @@ dependencies = [
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.11",
@@ -68,7 +67,7 @@ addopts = "--tb=short -q"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py37, py38, py39, py310, py311, py312, py313, py314
+envlist = py37, py38, py39, py310, py311, py312, py313
 
 [testenv]
 deps =

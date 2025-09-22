@@ -1,15 +1,11 @@
-Changelog
-=========
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
-[0.1.0] - 2025-09-19
---------------------
+## [0.1.0] - 2025-09-19
 
-Added
-^^^^^
+### Added
 
-- Added support for python 3.14
 **New Data Types Support:**
 - UUID fields with automatic UUID generation
 - JSON/JSONB fields with structured data generation
@@ -43,9 +39,9 @@ Added
 - Custom Faker instance support
 
 **New Utility Methods:**
-- ``create_batch(amount, commit=False)`` - Create model instances without immediate commit
-- ``create_with(overrides, amount=1)`` - Create instances with specific field values
-- ``reset(confirm=False)`` - Safely delete all records from model table with confirmation requirement
+- `create_batch(amount, commit=False)` - Create model instances without immediate commit
+- `create_with(overrides, amount=1)` - Create instances with specific field values
+- `reset(confirm=False)` - Safely delete all records from model table with confirmation requirement
 
 **Performance Improvements:**
 - Bulk insert operations for large data sets
@@ -54,14 +50,14 @@ Added
 - Lazy relationship loading for better performance
 
 **Enhanced Error Handling:**
-- New ``UniquenessError`` exception for unique constraint violations
+- New `UniquenessError` exception for unique constraint violations
 - Detailed logging with configurable log levels
 - Automatic transaction rollback on errors
-- Specific handling for ``IntegrityError`` with intelligent error messages
+- Specific handling for `IntegrityError` with intelligent error messages
 - Better error context and stack traces
 
 **Context Manager Support:**
-- ``with ModelFaker(model, session) as faker:`` syntax
+- `with ModelFaker(model, session) as faker:` syntax
 - Automatic cleanup and rollback on exceptions
 - Safe resource management
 
@@ -71,19 +67,17 @@ Added
 - Improved Tornado SQLAlchemy integration
 - Automatic session detection across frameworks
 
-Changed
-^^^^^^^
+### Changed
 
 - Dropped support for Python 3.6
-- **BREAKING**: Enhanced ``ModelFakerConfig`` with new parameters (backward compatible with defaults)
-- **BREAKING**: ``create()`` method now uses bulk operations for amounts > bulk_size
+- **BREAKING**: Enhanced `ModelFakerConfig` with new parameters (backward compatible with defaults)
+- **BREAKING**: `create()` method now uses bulk operations for amounts > bulk_size
 - Improved JSON data structure generation with more realistic nested objects
 - Enhanced relationship handling with better foreign key support
 - Better handling of nullable fields and default values
 - Improved primary key detection and auto-increment handling
 
-Fixed
-^^^^^
+### Fixed
 
 - Fixed issue with PostgreSQL UUID field handling
 - Improved compatibility with different SQLAlchemy versions
@@ -91,23 +85,17 @@ Fixed
 - Fixed memory leaks in bulk operations
 - Improved error handling for malformed JSON in doc strings
 
+## [0.0.1] - 2025-03-01
 
-[0.0.1] - 2025-03-01
---------------------
-
-Added
-^^^^^
+### Added
 
 - Updated test coverage.
 - Allowed different types of primary keys than integer.
-- Possibility to pass a custom faker instance to the ``ModelFaker``.
-- ``ModelFakerConfig`` to define custom configurations.
+- Possibility to pass a custom faker instance to the `ModelFaker`.
+- `ModelFakerConfig` to define custom configurations.
 
+## [0.0.0] - 2025-02-02
 
-[0.0.0] - 2025-02-02
---------------------
-
-Added
-^^^^^
+### Added
 
 Initial implementation.
