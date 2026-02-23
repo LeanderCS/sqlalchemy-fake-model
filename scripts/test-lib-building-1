@@ -5,4 +5,4 @@ rm -rf *.egg-info
 
 python -m build
 
-python -c "from flask_inputfilter import InputFilter"
+python -c "from sqlalchemy_fake_model import ModelFaker"

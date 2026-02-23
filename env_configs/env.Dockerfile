@@ -4,26 +4,26 @@ WORKDIR /app
 
 RUN apt-get update  \
     && apt-get install -y \
-        build-essential \
-        curl \
-        g++ \
-        git \
-        libbz2-dev \
-        libffi-dev \
-        libjpeg-dev \
-        liblzma-dev \
-        libncurses5-dev \
-        libncursesw5-dev \
-        libreadline-dev \
-        libsqlite3-dev \
-        libssl-dev \
-        llvm \
-        make \
-        python3-dev \
-        tk-dev \
-        wget \
-        xz-utils \
-        zlib1g-dev \
+    build-essential \
+    curl \
+    g++ \
+    git \
+    libbz2-dev \
+    libffi-dev \
+    libjpeg-dev \
+    liblzma-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    llvm \
+    make \
+    python3-dev \
+    tk-dev \
+    wget \
+    xz-utils \
+    zlib1g-dev \
     && apt-get clean \
     && curl https://pyenv.run | bash
 

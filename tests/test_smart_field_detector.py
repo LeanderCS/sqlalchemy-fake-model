@@ -3,12 +3,11 @@ Test the SmartFieldDetector class
 """
 import pytest
 from faker import Faker
-from sqlalchemy import Column, String, Integer, Float, Boolean, Date, DateTime
+from sqlalchemy import Column, String, Integer, Float, Date, DateTime
 from sqlalchemy.types import DECIMAL
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_fake_model import SmartFieldDetector
-from sqlalchemy_fake_model.Enum.ModelColumnTypesEnum import ModelColumnTypesEnum
 
 Base = declarative_base()
 

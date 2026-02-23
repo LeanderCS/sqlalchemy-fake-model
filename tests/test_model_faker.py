@@ -1,5 +1,4 @@
 from datetime import date, datetime
-import uuid
 
 import pytest
 from sqlalchemy import (
@@ -7,23 +6,23 @@ from sqlalchemy import (
     Column,
     Date,
     DateTime,
+    Enum,
     Float,
     ForeignKey,
     Integer,
     String,
     Text,
     Time,
-    Interval,
     LargeBinary,
     create_engine,
 )
-from sqlalchemy.dialects.postgresql import UUID, JSON, JSONB
 from sqlalchemy.types import DECIMAL
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+from enum import Enum as PyEnum
 from sqlalchemy_fake_model import ModelFaker
-from sqlalchemy_fake_model.Error import InvalidAmountError, UniquenessError
+from sqlalchemy_fake_model.Error import InvalidAmountError
 from sqlalchemy_fake_model.Model import ModelFakerConfig
 
 """
@@ -31,6 +30,14 @@ Test the ModelFaker class
 """
 
 Base = declarative_base()
+
+class StatusTypesEnum(PyEnum):
+
+    CREATED = "created"
+
+    PUBLISHED = "published"
+
+    CANCELED = "canceled"
 
 
 class MyModel(Base):
@@ -47,6 +54,11 @@ class MyModel(Base):
     nullable_field = Column(String(80), nullable=True)
     boolean_field = Column(Boolean, nullable=False)
     default_field = Column(String(80), nullable=False, default="test123")
+    enum_field = Column(
+        Enum(StatusTypesEnum),
+        nullable=False,
+        default=StatusTypesEnum.CREATED
+    )
     integer_field = Column(Integer, nullable=False)
     max_min_integer_field = Column(
         Integer, nullable=False, info={"min": 100, "max": 101}
@@ -231,6 +243,16 @@ def test_default_value(fake_data, session) -> None:
 
     entry = session.query(MyModel).first()
     assert entry.default_field == "test123"
+
+
+def test_enum_default_value(fake_data, session) -> None:
+    """
+    Test if the default value is correctly set (for price).
+    """
+    fake_data.create()
+
+    entry = session.query(MyModel).first()
+    assert entry.enum_field == StatusTypesEnum.CREATED
 
 
 def test_default_value_fill(fake_data, session) -> None:

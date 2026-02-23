@@ -179,7 +179,7 @@ It also allows a default enum value:
 status: Column[Enum] = db.Column(
     Enum(StatusTypesEnum),
     nullable=False,
-    default=StatusTypesEnum.ACTIVE.value
+    default=StatusTypesEnum.ACTIVE
 )
 ```
 
@@ -198,16 +198,16 @@ to maintain referential integrity. It supports all SQLAlchemy relationship types
 class User(Base):
     __tablename__ = "users"
 
-    id: Column[Integer] = Column(Integer, primary_key=True)
-    name: Column[String] = Column(String(100))
+    id: Column[Integer] = db.Column(Integer, primary_key=True)
+    name: Column[String] = db.Column(String(100))
     messages = relationship("Message", back_populates="user")
 
 class Message(Base):
     __tablename__ = "messages"
 
-    id: Column[Integer] = Column(Integer, primary_key=True)
-    content: Column[String] = Column(String(500))
-    user_id: Column[Integer] = Column(Integer, ForeignKey("users.id"))
+    id: Column[Integer] = db.Column(Integer, primary_key=True)
+    content: Column[String] = db.Column(String(500))
+    user_id: Column[Integer] = db.Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="messages")
 
 # This automatically creates users for each message
