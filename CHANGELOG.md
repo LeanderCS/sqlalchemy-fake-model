@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2026-02-23
+
+### Added
+
+- Tests for Enum fields
+- Circular dependency detection for relations
+- Relations use existing records when possible
+
+
 ## [0.1.0] - 2025-09-19
 
 ### Added

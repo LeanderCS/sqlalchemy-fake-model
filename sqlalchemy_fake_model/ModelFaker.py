@@ -52,6 +52,8 @@ class ModelFaker:
         )
         self.logger = logging.getLogger(__name__)
         self._unique_values = {}
+        self._relationship_cache = {}
+        self._processing_relationships = set()
         self.smart_detector = (
             SmartFieldDetector(self.faker)
             if self.config.smart_detection
@@ -146,40 +148,63 @@ class ModelFaker:
 
     def _create_single_batch(self, amount: int) -> None:
         """Creates a single batch of records."""
-        try:
-            batch_data = []
+        retries = 0
+        max_retries = (
+            self.config.max_retries if self.config.unique_constraints else 1
+        )
 
-            for _ in range(amount):
-                data = {}
-                for column in self.__get_table_columns():
-                    if self.__should_skip_field(column):
-                        continue
-                    data[column.name] = (
-                        self._generate_fake_data_with_overrides(column)
+        while retries < max_retries:
+            try:
+                batch_data = []
+
+                for _ in range(amount):
+                    data = {}
+                    for column in self.__get_table_columns():
+                        if self.__should_skip_field(column):
+                            continue
+                        data[column.name] = (
+                            self._generate_fake_data_with_overrides(column)
+                        )
+                    batch_data.append(data)
+
+                if self.__is_many_to_many_relation_table():
+                    self.db.execute(self.model.insert().values(batch_data))
+                else:
+                    for data in batch_data:
+                        self.db.add(self.model(**data))
+
+                self.db.commit()
+                self.logger.info(f"Successfully created {amount} records")
+                return
+
+            except IntegrityError as e:
+                self.db.rollback()
+                if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+                    retries += 1
+                    if retries >= max_retries:
+                        self.logger.error(
+                            "Unique constraint violation after "
+                            + f"{max_retries} retries: {e}"
+                        )
+                        raise UniquenessError(
+                            "unknown_field", max_retries
+                        ) from e
+                    self.logger.warning(
+                        "Unique constraint violation, retrying "
+                        + f"({retries}/{max_retries}): {e}"
                     )
-                batch_data.append(data)
-
-            if self.__is_many_to_many_relation_table():
-                self.db.execute(self.model.insert().values(batch_data))
-            else:
-                for data in batch_data:
-                    self.db.add(self.model(**data))
-
-            self.db.commit()
-            self.logger.info(f"Successfully created {amount} records")
-
-        except IntegrityError as e:
-            self.db.rollback()
-            self.logger.error(f"Integrity error in batch creation: {e}")
-            if "unique" in str(e).lower() or "duplicate" in str(e).lower():
-                raise UniquenessError("unknown_field", self.config.max_retries)
-            raise
-        except Exception as e:
-            self.db.rollback()
-            self.logger.error(f"Failed to create batch: {e}")
-            raise RuntimeError(
-                f"Failed to commit: {e} {traceback.format_exc()}"
-            )
+                    continue
+                raise
+            except Exception as e:
+                self.db.rollback()
+                self.logger.error(f"Failed to create batch: {e}")
+                if isinstance(
+                    e, (IntegrityError, UniquenessError, InvalidAmountError)
+                ):
+                    raise
+                raise RuntimeError(
+                    f"Failed to commit: {e} {traceback.format_exc()}"
+                ) from e
 
     def _create_bulk(self, amount: int) -> None:
         """Creates records in multiple batches for better performance."""
@@ -214,7 +239,7 @@ class ModelFaker:
         column_type = column.type
 
         if column.doc:
-            return str(self._generate_json_data(column.doc))
+            return json.dumps(self._generate_json_data(column.doc))
 
         # Enum has to be the first type to check, or otherwise it
         # uses the options of the corresponding type of the enum options
@@ -238,6 +263,9 @@ class ModelFaker:
                 else 255
             )
             return self.faker.text(max_nb_chars=max_length)
+
+        if isinstance(column_type, ModelColumnTypesEnum.TEXT.value):
+            return self.faker.text(max_nb_chars=500)
 
         if isinstance(column_type, ModelColumnTypesEnum.INTEGER.value):
             info = column.info
@@ -301,6 +329,8 @@ class ModelFaker:
                 ModelColumnTypesEnum.JSONB.value,
             ),
         ):
+            if column.doc:
+                return self._generate_json_data(column.doc)
             json_structure = {
                 "id": "integer",
                 "name": "string",
@@ -310,16 +340,49 @@ class ModelFaker:
 
         return None
 
-    def __handle_relationship(self, column: Column) -> Optional[Table]:
+    def __handle_relationship(self, column: Column) -> Any:
         """
         Handles the relationship of a column with another model.
         It creates a fake data entry for the parent model and returns its id.
+        Reuses existing records when possible to avoid duplicates.
         """
         parent_model = self.__get_related_class(column)
+        model_key = (
+            parent_model.__name__
+            if hasattr(parent_model, "__name__")
+            else str(parent_model)
+        )
 
-        ModelFaker(parent_model, self.db).create()
+        if model_key in self._processing_relationships:
+            existing_record = self.db.query(parent_model).first()
+            if existing_record:
+                return existing_record
 
-        return self.db.query(parent_model).first()
+        self._processing_relationships.add(model_key)
+
+        try:
+            if model_key not in self._relationship_cache:
+                existing_record = self.db.query(parent_model).first()
+                if existing_record:
+                    self._relationship_cache[model_key] = existing_record
+                else:
+                    ModelFaker(
+                        parent_model, self.db, config=self.config
+                    ).create()
+                    self._relationship_cache[model_key] = self.db.query(
+                        parent_model
+                    ).first()
+            else:
+                if self.config.unique_constraints:
+                    existing_record = self.db.query(parent_model).first()
+                    if existing_record:
+                        return existing_record
+
+            return self._relationship_cache.get(model_key) or (
+                self.db.query(parent_model).first()
+            )
+        finally:
+            self._processing_relationships.discard(model_key)
 
     def __is_many_to_many_relation_table(self) -> bool:
         """
@@ -378,7 +441,7 @@ class ModelFaker:
             else self.model.__table__.columns
         )
 
-    def __get_related_class(self, column: Column) -> Table:
+    def __get_related_class(self, column: Column) -> Any:
         """
         Returns the related class of a column if it has
         a relationship with another model.
@@ -442,7 +505,9 @@ class ModelFaker:
 
         return self._generate_fake_data(column)
 
-    def _generate_primitive(self, primitive_type: str) -> Any:
+    def _generate_primitive(
+        self, primitive_type: str
+    ) -> Union[str, int, float, bool, date, datetime]:
         """
         Generates fake data for primitive types.
         """
@@ -500,7 +565,11 @@ class ModelFaker:
             if commit:
                 self.db.rollback()
             self.logger.error(f"Failed to create batch: {e}")
-            raise
+            if isinstance(
+                e, (IntegrityError, UniquenessError, InvalidAmountError)
+            ):
+                raise
+            raise RuntimeError(f"Failed to create batch: {e}") from e
 
     def create_with(
         self, overrides: Dict[str, Any], amount: int = 1
@@ -546,7 +615,11 @@ class ModelFaker:
         except Exception as e:
             self.db.rollback()
             self.logger.error(f"Failed to create with overrides: {e}")
-            raise
+            if isinstance(
+                e, (IntegrityError, UniquenessError, InvalidAmountError)
+            ):
+                raise
+            raise RuntimeError(f"Failed to create with overrides: {e}") from e
 
     def reset(self, confirm: bool = False) -> int:
         """
@@ -563,8 +636,7 @@ class ModelFaker:
                 result = self.db.execute(self.model.delete())
                 deleted_count = result.rowcount
             else:
-                deleted_count = self.db.query(self.model).count()
-                self.db.query(self.model).delete()
+                deleted_count = self.db.query(self.model).delete()
 
             self.db.commit()
             self.logger.info(

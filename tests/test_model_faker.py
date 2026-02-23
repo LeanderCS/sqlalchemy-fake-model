@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime
 
 import pytest
@@ -360,7 +361,7 @@ def test_json_list_field(fake_data, session) -> None:
     assert entry.json_list_field is not None
     assert isinstance(entry.json_list_field, str)
 
-    json_data = eval(entry.json_list_field)
+    json_data = json.loads(entry.json_list_field)
     assert isinstance(json_data, list)
     assert len(json_data) == 5
 
@@ -377,7 +378,7 @@ def test_json_obj_field(fake_data, session) -> None:
     entry = session.query(MyModel).first()
     assert isinstance(entry.json_obj_field, str)
 
-    json_data = eval(entry.json_obj_field)
+    json_data = json.loads(entry.json_obj_field)
     assert isinstance(json_data, dict)
 
     assert isinstance(json_data["street"], str)
